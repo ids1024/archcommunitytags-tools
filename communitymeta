@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+
+import shlex
+import os
+import sys
+
+def parseMetadata():
+    # This could be stored in an sqlite database for speed
+    packages = []
+    metadir = os.path.expanduser("~/.communitymeta/")
+    for package in os.listdir(metadir):
+        with open(metadir + package) as file:
+            pacmeta = {}
+            for line in file:
+                columns = shlex.split(line)
+                if not columns:
+                    continue
+                pacmeta[columns[0]] = columns[1:]
+            packages.append((package, pacmeta))
+    return packages
+
+
+if __name__ == "__main__":
+    packages = parseMetadata()
+    params = []
+    for arg in sys.argv[1:]:
+        param = arg.split('=')
+        if len(param) != 2:
+            print("Error: Improperly formatted argument")
+            sys.exit(1)
+        params.append(param)
+    for package, pacmeta in packages:
+        for name, value in params:
+            if value not in pacmeta.get(name, ()):
+                break
+        else:
+            print(package)
