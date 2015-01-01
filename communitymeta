@@ -23,15 +23,18 @@ def parseMetadata():
             packages.append((package, pacmeta))
     return packages
 
+def sync():
+    if not os.path.exists(metadir):
+        subprocess.call(["git", "clone",
+            "git://github.com/ids1024/archcommunitymetadata", metadir])
+    else:
+        os.chdir(metadir)
+        subprocess.call(["git", "pull"])
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--sync":
-        if not os.path.exists(metadir):
-            subprocess.call(["git", "clone",
-                "git://github.com/ids1024/archcommunitymetadata", metadir])
-        else:
-            os.chdir(metadir)
-            subprocess.call(["git", "pull"])
+        sync()
         sys.exit(0)
     packages = parseMetadata()
     params = []
