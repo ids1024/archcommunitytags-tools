@@ -3,12 +3,16 @@
 import shlex
 import os
 import sys
+import subprocess
+
+metadir = os.path.expanduser("~/.communitymeta/")
 
 def parseMetadata():
     # This could be stored in an sqlite database for speed
     packages = []
-    metadir = os.path.expanduser("~/.communitymeta/")
     for package in os.listdir(metadir):
+        if not os.path.isfile(metadir + package):
+            continue
         with open(metadir + package) as file:
             pacmeta = {}
             for line in file:
@@ -21,6 +25,14 @@ def parseMetadata():
 
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "--sync":
+        if not os.path.exists(metadir):
+            subprocess.call(["git", "clone",
+                "git://github.com/ids1024/archcommunitymetadata", metadir])
+        else:
+            os.chdir(metadir)
+            subprocess.call(["git", "pull"])
+        sys.exit(0)
     packages = parseMetadata()
     params = []
     for arg in sys.argv[1:]:
