@@ -4,23 +4,34 @@ import shlex
 import os
 import sys
 import subprocess
+from pycman import config
 
 metadir = os.path.expanduser("~/.communitymeta/")
+handle = config.init_with_config("/etc/pacman.conf")
 
 def parseMetadata():
     # This could be stored in an sqlite database for speed
     packages = []
-    for package in os.listdir(metadir):
-        if not os.path.isfile(metadir + package):
-            continue
-        with open(metadir + package) as file:
-            pacmeta = {}
-            for line in file:
-                columns = shlex.split(line)
-                if not columns:
-                    continue
-                pacmeta[columns[0]] = columns[1:]
-            packages.append((package, pacmeta))
+    syncpkgs = [pkg for db in handle.get_syncdbs() for pkg in db.pkgcache]
+    for package in syncpkgs:
+        pacmeta = {}
+        pacmeta['provide'] = package.provides
+        pacmeta['depend'] = package.depends
+        pacmeta['optdepend'] = package.optdepends
+        pacmeta['group'] = package.groups
+        pacmeta['replace'] = package.replaces
+        pacmeta['conflict'] = package.conflicts
+        pacmeta['license'] = package.licenses
+        pacmeta['packager'] = [package.packager]
+        pacmeta['repo'] = [package.db.name]
+        if package.name in os.listdir(metadir):
+            with open(metadir + package.name) as file:
+                for line in file:
+                    columns = shlex.split(line)
+                    if not columns:
+                        continue
+                    pacmeta[columns[0]] = columns[1:]
+        packages.append((package.name, pacmeta))
     return packages
 
 def sync():
@@ -28,8 +39,10 @@ def sync():
         subprocess.call(["git", "clone",
             "git://github.com/ids1024/archcommunitymetadata", metadir])
     else:
+        origdir = os.getcwd()
         os.chdir(metadir)
         subprocess.call(["git", "pull"])
+        os.chdir(origdir)
 
 
 if __name__ == "__main__":
