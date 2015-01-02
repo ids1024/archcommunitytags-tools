@@ -59,7 +59,11 @@ if __name__ == "__main__":
         params.append(param)
     for package, pacmeta in packages:
         for name, value in params:
-            if value not in pacmeta.get(name, ()):
-                break
+            if name[-1] == '!':
+                if value in pacmeta.get(name[:-1], ()):
+                    break
+            else:
+                if value not in pacmeta.get(name, ()):
+                    break
         else:
             print(package)
