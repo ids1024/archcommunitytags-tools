@@ -27,7 +27,6 @@ class EvaluationError(Exception):
 
 def parseMetadata():
     # This could be stored in an sqlite database for speed
-    packages = []
     syncpkgs = (pkg for db in handle.get_syncdbs() for pkg in db.pkgcache)
     for package in syncpkgs:
         pacmeta = {}
@@ -47,8 +46,7 @@ def parseMetadata():
                     if not columns:
                         continue
                     pacmeta[columns[0]] = columns[1:]
-        packages.append((package.name, pacmeta))
-    return packages
+        yield package.name, pacmeta
 
 def sync():
     if not os.path.exists(metadir):
