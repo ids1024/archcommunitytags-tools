@@ -20,6 +20,9 @@ expr = pyparsing.operatorPrecedence(condition,[
                             ("or", 2, pyparsing.opAssoc.LEFT, ),
                             ])
 
+class EvaluationError(Exception):
+    pass
+
 def parseMetadata():
     # This could be stored in an sqlite database for speed
     packages = []
@@ -56,29 +59,35 @@ def sync():
         os.chdir(origdir)
 
 def evaluateExpr(pacmeta, tokens):
+    if len(tokens) == 1:
+        return evaluateExpr(pacmeta, tokens[0])
     if len(tokens) == 2 and tokens[0] == 'not':
         return not evaluateExpr(pacmeta, tokens[1])
-    if isinstance(tokens[0], (str, bool)):
-        left = tokens[0]
-    else:
-        left = evaluateExpr(pacmeta, tokens[0])
-    if isinstance(tokens[2], (str, bool)):
-        right = tokens[2]
-    else:
-        right = evaluateExpr(pacmeta, tokens[2])
 
-    if tokens[1] == '=!':
+    left = tokens[0]
+    operator = tokens[1]
+    right = tokens[2]
+    if operator in ('and', 'or'):
+        if not isinstance(left, bool):
+            left = evaluateExpr(pacmeta, left)
+        if not isinstance(right, (str, bool)):
+            right = evaluateExpr(pacmeta, right)
+
+    if operator == '=!':
         if right not in pacmeta.get(left, ()):
             return True
-    elif tokens[1] == '=':
+    elif operator == '=':
         if right in pacmeta.get(left, ()):
             return True
-    elif tokens[1] == 'and':
+    elif operator == 'and':
         if left and right:
             return True
-    elif tokens[1] == 'or':
+    elif operator == 'or':
         if left or right:
             return True
+    else:
+        # This code should never be reached; raise exception if it is
+        raise EvaluationError
     return False
 
 
@@ -88,7 +97,11 @@ if __name__ == "__main__":
         sys.exit(0)
     packages = parseMetadata()
     params = []
-    tree = expr.parseString(sys.argv[1])[0]
+    try:
+        tree = expr.parseString(sys.argv[1], parseAll=True)
+    except pyparsing.ParseException as e:
+        print("Error parsing query at column " + str(e.col))
+        sys.exit(1)
     for package, pacmeta in packages:
         if evaluateExpr(pacmeta, tree):
             print(package)
