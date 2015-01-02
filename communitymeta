@@ -50,12 +50,15 @@ def parseMetadata():
 
 def sync():
     if not os.path.exists(metadir):
-        subprocess.call(["git", "clone", syncurl, metadir])
+        returnval = subprocess.call(["git", "clone", syncurl, metadir])
     else:
         origdir = os.getcwd()
         os.chdir(metadir)
-        subprocess.call(["git", "pull"])
+        returnval = subprocess.call(["git", "pull"])
         os.chdir(origdir)
+    if returnval != 0:
+        print("Error: git returned nonzero exit status")
+        sys.exit(1)
 
 def evaluateExpr(pacmeta, tokens):
     if len(tokens) == 1:
