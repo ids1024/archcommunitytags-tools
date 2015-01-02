@@ -97,6 +97,9 @@ if __name__ == "__main__":
     if args.sync:
         sync()
         sys.exit(0)
+    if not os.path.exists(metadir):
+        print("Metadata directory does not exist: running initial sync")
+        sync()
     packages = parseMetadata()
     if not args.query:
         print(*(package for package, pacmeta in packages), sep='\n')
