@@ -8,6 +8,7 @@ from pycman import config
 import pyparsing
 
 metadir = os.path.expanduser("~/.communitymeta/")
+syncurl = "git://github.com/ids1024/archcommunitymetadata"
 handle = config.init_with_config("/etc/pacman.conf")
 
 operator = pyparsing.Regex("!=|=").setName("operator")
@@ -50,8 +51,7 @@ def parseMetadata():
 
 def sync():
     if not os.path.exists(metadir):
-        subprocess.call(["git", "clone",
-            "git://github.com/ids1024/archcommunitymetadata", metadir])
+        subprocess.call(["git", "clone", syncurl, metadir])
     else:
         origdir = os.getcwd()
         os.chdir(metadir)
