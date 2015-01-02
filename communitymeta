@@ -72,22 +72,17 @@ def evaluateExpr(pacmeta, tokens):
             left = evaluateExpr(pacmeta, left)
         if not isinstance(right, (str, bool)):
             right = evaluateExpr(pacmeta, right)
-
-    if operator == '=!':
-        if right not in pacmeta.get(left, ()):
-            return True
-    elif operator == '=':
-        if right in pacmeta.get(left, ()):
-            return True
-    elif operator == 'and':
-        if left and right:
-            return True
-    elif operator == 'or':
-        if left or right:
-            return True
+    elif operator in ('=', '!='):
+        pacvalues = pacmeta.get(left, ())
     else:
         # This code should never be reached; raise exception if it is
         raise EvaluationError
+
+    if ((operator == '=!' and (right not in pacvalues)) or
+        (operator == '=' and (right in pacvalues)) or
+        (operator == 'and' and (left and right)) or
+        (operator == 'or' and (left or right))):
+        return True
     return False
 
 
