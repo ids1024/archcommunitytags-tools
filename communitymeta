@@ -66,15 +66,16 @@ def evaluateExpr(pacmeta, tokens):
     if len(tokens) == 2 and tokens[0] == 'not':
         return not evaluateExpr(pacmeta, tokens[1])
 
-    left = tokens[0]
     operator = tokens[1]
-    right = tokens[2]
     if operator in ('and', 'or'):
-        if not isinstance(left, bool):
-            left = evaluateExpr(pacmeta, left)
-        if not isinstance(right, bool):
-            right = evaluateExpr(pacmeta, right)
+        values = []
+        for value in tokens[::2]: # All but operators
+            if not isinstance(value, bool):
+                value = evaluateExpr(pacmeta, value)
+            values.append(value)
     elif operator in ('=', '!='):
+        left = tokens[0]
+        right = tokens[2]
         pacvalues = pacmeta.get(left, ())
     else:
         # This code should never be reached; raise exception if it is
@@ -82,8 +83,8 @@ def evaluateExpr(pacmeta, tokens):
 
     if ((operator == '=!' and (right not in pacvalues)) or
         (operator == '=' and (right in pacvalues)) or
-        (operator == 'and' and (left and right)) or
-        (operator == 'or' and (left or right))):
+        (operator == 'and' and all(values)) or
+        (operator == 'or' and any(values))):
         return True
     return False
 
