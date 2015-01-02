@@ -69,7 +69,7 @@ def evaluateExpr(pacmeta, tokens):
     if operator in ('and', 'or'):
         if not isinstance(left, bool):
             left = evaluateExpr(pacmeta, left)
-        if not isinstance(right, (str, bool)):
+        if not isinstance(right, bool):
             right = evaluateExpr(pacmeta, right)
     elif operator in ('=', '!='):
         pacvalues = pacmeta.get(left, ())
