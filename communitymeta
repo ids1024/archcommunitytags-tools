@@ -6,6 +6,7 @@ import sys
 import subprocess
 from pycman import config
 import pyparsing
+import argparse
 
 metadir = os.path.expanduser("~/.communitymeta/")
 syncurl = "git://github.com/ids1024/archcommunitymetadata"
@@ -87,13 +88,21 @@ def evaluateExpr(pacmeta, tokens):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "--sync":
+    parser = argparse.ArgumentParser(
+            description='Package metadata provided by the community')
+    parser.add_argument('--sync', action='store_true',
+            help='synchronize with server')
+    parser.add_argument('query', nargs='?', default='')
+    args = parser.parse_args()
+    if args.sync:
         sync()
         sys.exit(0)
     packages = parseMetadata()
-    params = []
+    if not args.query:
+        print(*(package for package, pacmeta in packages), sep='\n')
+        sys.exit(0)
     try:
-        tree = expr.parseString(sys.argv[1], parseAll=True)
+        tree = expr.parseString(args.query, parseAll=True)
     except pyparsing.ParseException as e:
         print("Error parsing query at column " + str(e.col))
         sys.exit(1)
