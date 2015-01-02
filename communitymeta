@@ -13,7 +13,7 @@ syncurl = "git://github.com/ids1024/archcommunitymetadata"
 handle = config.init_with_config("/etc/pacman.conf")
 
 operator = pyparsing.Regex("!=|=").setName("operator")
-text = pyparsing.Word(pyparsing.alphanums + '-_')
+text = pyparsing.Word(pyparsing.alphanums + '-_') | pyparsing.QuotedString('"')
 condition = pyparsing.Group(text + operator + text)
 
 expr = pyparsing.operatorPrecedence(condition,[
