@@ -5,9 +5,20 @@ import os
 import sys
 import subprocess
 from pycman import config
+import pyparsing
 
 metadir = os.path.expanduser("~/.communitymeta/")
 handle = config.init_with_config("/etc/pacman.conf")
+
+operator = pyparsing.Regex("!=|=").setName("operator")
+text = pyparsing.Word(pyparsing.alphanums + '-_')
+condition = pyparsing.Group(text + operator + text)
+
+expr = pyparsing.operatorPrecedence(condition,[
+                            ("not", 1, pyparsing.opAssoc.RIGHT, ),
+                            ("and", 2, pyparsing.opAssoc.LEFT, ),
+                            ("or", 2, pyparsing.opAssoc.LEFT, ),
+                            ])
 
 def parseMetadata():
     # This could be stored in an sqlite database for speed
@@ -44,6 +55,32 @@ def sync():
         subprocess.call(["git", "pull"])
         os.chdir(origdir)
 
+def evaluateExpr(pacmeta, tokens):
+    if len(tokens) == 2 and tokens[0] == 'not':
+        return not evaluateExpr(pacmeta, tokens[1])
+    if isinstance(tokens[0], (str, bool)):
+        left = tokens[0]
+    else:
+        left = evaluateExpr(pacmeta, tokens[0])
+    if isinstance(tokens[2], (str, bool)):
+        right = tokens[2]
+    else:
+        right = evaluateExpr(pacmeta, tokens[2])
+
+    if tokens[1] == '=!':
+        if right not in pacmeta.get(left, ()):
+            return True
+    elif tokens[1] == '=':
+        if right in pacmeta.get(left, ()):
+            return True
+    elif tokens[1] == 'and':
+        if left and right:
+            return True
+    elif tokens[1] == 'or':
+        if left or right:
+            return True
+    return False
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--sync":
@@ -51,20 +88,7 @@ if __name__ == "__main__":
         sys.exit(0)
     packages = parseMetadata()
     params = []
-    for arg in sys.argv[1:]:
-        param = arg.split('=')
-        if len(param) != 2:
-            print("Error: Improperly formatted argument")
-            sys.exit(1)
-        for i in param[1].split(','):
-            params.append((param[0], i))
+    tree = expr.parseString(sys.argv[1])[0]
     for package, pacmeta in packages:
-        for name, value in params:
-            if name[-1] == '!':
-                if value in pacmeta.get(name[:-1], ()):
-                    break
-            else:
-                if value not in pacmeta.get(name, ()):
-                    break
-        else:
+        if evaluateExpr(pacmeta, tree):
             print(package)
