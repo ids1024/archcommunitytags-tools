@@ -28,7 +28,7 @@ class EvaluationError(Exception):
 def parseMetadata():
     # This could be stored in an sqlite database for speed
     packages = []
-    syncpkgs = [pkg for db in handle.get_syncdbs() for pkg in db.pkgcache]
+    syncpkgs = (pkg for db in handle.get_syncdbs() for pkg in db.pkgcache)
     for package in syncpkgs:
         pacmeta = {}
         pacmeta['provide'] = package.provides
