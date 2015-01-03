@@ -90,11 +90,9 @@ def evaluateExpr(pacmeta, tokens):
         return ((operator == 'and' and all(values)) or
                 (operator == 'or' and any(values)))
     elif operator in ('=', '!='):
-        left = tokens[0]
-        right = tokens[2]
-        pacvalues = pacmeta.get(left, ())
-        return ((operator == '=' and right in pacvalues) or
-                (operator == '!=' and right not in pacvalues))
+        pacvalues = pacmeta.get(tokens[0], ())
+        return ((operator == '=' and tokens[2] in pacvalues) or
+                (operator == '!=' and tokens[2] not in pacvalues))
     else:
         # This code should never be reached; raise exception if it is
         raise EvaluationError
