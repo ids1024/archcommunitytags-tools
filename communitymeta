@@ -16,10 +16,10 @@ operator = pyparsing.Regex("!=|=").setName("operator")
 text = pyparsing.Word(pyparsing.alphanums + '-_') | pyparsing.QuotedString('"')
 condition = pyparsing.Group((text + operator + text) | text)
 
-expr = pyparsing.operatorPrecedence(condition,[
-                            ("not", 1, pyparsing.opAssoc.RIGHT, ),
-                            ("and", 2, pyparsing.opAssoc.LEFT, ),
-                            ("or", 2, pyparsing.opAssoc.LEFT, ),
+expr = pyparsing.operatorPrecedence(condition, [
+                            ("not", 1, pyparsing.opAssoc.RIGHT),
+                            ("and", 2, pyparsing.opAssoc.LEFT),
+                            ("or", 2, pyparsing.opAssoc.LEFT)
                             ])
 
 class EvaluationError(Exception):
@@ -105,6 +105,7 @@ if __name__ == "__main__":
             help='synchronize with server')
     parser.add_argument('query', nargs='?', default='')
     args = parser.parse_args()
+
     if args.sync:
         sync()
         sys.exit(0)
@@ -113,13 +114,14 @@ if __name__ == "__main__":
         sync()
     packages = parseMetadata().items()
     if not args.query:
-        print(*(package for package, pacmeta in packages), sep='\n')
-        sys.exit(0)
-    try:
-        tree = expr.parseString(args.query, parseAll=True)
-    except pyparsing.ParseException as e:
-        print("Error parsing query at column " + str(e.col))
-        sys.exit(1)
-    for package, pacmeta in packages:
-        if evaluateExpr(pacmeta, tree):
-            print(package)
+        # Display all packages by default
+        matches = (package for package, pacmeta in packages)
+    else:
+        try:
+            tree = expr.parseString(args.query, parseAll=True)
+        except pyparsing.ParseException as e:
+            print("Error parsing query at column " + str(e.col))
+            sys.exit(1)
+        matches = (package for package, pacmeta in packages
+                   if evaluateExpr(pacmeta, tree))
+    print(*matches, sep='\n')
