@@ -28,6 +28,8 @@ class EvaluationError(Exception):
 def parseMetadata():
     # This could be stored in an sqlite database for speed
     syncpkgs = (pkg for db in handle.get_syncdbs() for pkg in db.pkgcache)
+    packages = {}
+    parsevars = []
     for package in syncpkgs:
         pacmeta = {}
         pacmeta['provide'] = package.provides
@@ -45,8 +47,25 @@ def parseMetadata():
                     columns = shlex.split(line)
                     if not columns:
                         continue
-                    pacmeta[columns[0]] = columns[1:]
-        yield package.name, pacmeta
+                    param, values = columns[0], columns[1:]
+                    for i, value in enumerate(values):
+                        if value[0] == '$':
+                            parsevars.append((package.name, param, i))
+                    pacmeta[param] = values
+        packages[package.name] = pacmeta
+
+    for pacname, param, i in parsevars:
+        pacmeta = packages[pacname]
+        values = pacmeta[param]
+        if '.' in values[i]:
+            pac, param = values[i][1:].split('.', 1)
+            newvals = packages.get(pac, {}).get(param, [])
+        else:
+            newvals = pacmeta[value]
+        values.extend(newvals)
+        del values[i]
+
+    return packages
 
 def sync():
     if not os.path.exists(metadir):
@@ -102,7 +121,7 @@ if __name__ == "__main__":
     if not os.path.exists(metadir):
         print("Metadata directory does not exist: running initial sync")
         sync()
-    packages = parseMetadata()
+    packages = parseMetadata().items()
     if not args.query:
         print(*(package for package, pacmeta in packages), sep='\n')
         sys.exit(0)
