@@ -47,24 +47,20 @@ def parseMetadata():
                     columns = shlex.split(line)
                     if not columns:
                         continue
-                    param, values = columns[0], columns[1:]
-                    for i, value in enumerate(values):
-                        if value[0] == '$':
-                            parsevars.append((package.name, param, i))
-                    pacmeta[param] = values
+                    pacmeta[columns[0]] = columns[1:]
         packages[package.name] = pacmeta
-
-    for pacname, param, i in parsevars:
-        pacmeta = packages[pacname]
-        values = pacmeta[param]
-        if '.' in values[i]:
-            pac, param = values[i][1:].split('.', 1)
-            newvals = packages.get(pac, {}).get(param, [])
-        else:
-            newvals = pacmeta[value]
-        values.extend(newvals)
-        del values[i]
-
+    for name, pacmeta in packages.items():
+        for param, values in pacmeta.items():
+            for i, value in enumerate(values.copy()):
+                if value[0] == '$':
+                    if '.' in value:
+                        pac, param = value[1:].split('.', 1)
+                        newvals = packages.get(pac, {}).get(param, [])
+                    else:
+                        newvals = pacmeta[value[1:]]
+                    values.extend(newvals)
+                    del values[i]
+                    
     return packages
 
 def sync():
