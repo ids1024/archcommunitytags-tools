@@ -7,9 +7,12 @@ import subprocess
 from pycman import config
 import pyparsing
 import argparse
+import urllib.request
+import json
 
 metadir = os.path.expanduser("~/.communitymeta/")
 syncurl = "git://github.com/ids1024/archcommunitymetadata"
+pacneturl = "http://pacnet.archlinux.pl/api/packages/"
 handle = config.init_with_config("/etc/pacman.conf")
 
 operator = pyparsing.Regex("!=|=").setName("operator")
@@ -27,6 +30,10 @@ class EvaluationError(Exception):
 
 def parseMetadata():
     # This could be stored in an sqlite database for speed
+    with open(metadir + '.pacnet') as file:
+        pacnet = json.load(file)
+    categories = {package['name']: package['category__name']
+                 for package in pacnet}
     syncpkgs = (pkg for db in handle.get_syncdbs() for pkg in db.pkgcache)
     packages = {}
     parsevars = []
@@ -41,6 +48,7 @@ def parseMetadata():
         pacmeta['license'] = package.licenses
         pacmeta['packager'] = [package.packager]
         pacmeta['repo'] = [package.db.name]
+        pacmeta['category'] = [categories.get(package.name, 'none')]
         if package.name in os.listdir(metadir):
             with open(metadir + package.name) as file:
                 for line in file:
@@ -74,6 +82,10 @@ def sync():
     if returnval != 0:
         print("Error: git returned nonzero exit status")
         sys.exit(1)
+    print("Syncing with pacnet...")
+    pacnetdata = urllib.request.urlopen(pacneturl).read().decode()
+    with open(metadir + '.pacnet', 'w') as file:
+        file.write(pacnetdata)
 
 def evaluateExpr(pacmeta, tokens):
     if len(tokens) == 1 and isinstance(tokens[0], str):
