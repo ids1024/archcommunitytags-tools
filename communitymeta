@@ -18,7 +18,7 @@ pacneturl = "http://pacnet.archlinux.pl/api/packages/"
 handle = config.init_with_config("/etc/pacman.conf")
 
 operator = pyparsing.Regex("!=|=").setName("operator")
-allowedchars = ''.join(set(pyparsing.printables) - set('!="'))
+allowedchars = ''.join(set(pyparsing.printables) - set('!="()'))
 text = pyparsing.Word(allowedchars) | pyparsing.QuotedString('"')
 condition = pyparsing.Group((text + operator + text) | text)
 
