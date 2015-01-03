@@ -18,7 +18,8 @@ pacneturl = "http://pacnet.archlinux.pl/api/packages/"
 handle = config.init_with_config("/etc/pacman.conf")
 
 operator = pyparsing.Regex("!=|=").setName("operator")
-text = pyparsing.Word(pyparsing.alphanums + '-_/') | pyparsing.QuotedString('"')
+allowedchars = ''.join(set(pyparsing.printables) - set('!="'))
+text = pyparsing.Word(allowedchars) | pyparsing.QuotedString('"')
 condition = pyparsing.Group((text + operator + text) | text)
 
 expr = pyparsing.operatorPrecedence(condition, [
@@ -42,6 +43,7 @@ def parseMetadata():
     parsevars = []
     for package in syncpkgs:
         pacmeta = {}
+        pacmeta['name'] = [package.name]
         pacmeta['provide'] = package.provides
         pacmeta['depend'] = package.depends
         pacmeta['optdepend'] = package.optdepends
@@ -105,18 +107,18 @@ def sync():
         file.write(pacnetdata)
     os.chdir(origdir)
 
-def evaluateExpr(package, pacmeta, tokens, regex):
+def evaluateExpr(pacmeta, tokens, regex):
     if len(tokens) == 1 and isinstance(tokens[0], str):
         return (tokens[0] in pacmeta) and ('false' not in pacmeta[tokens[0]])
     if len(tokens) == 1:
-        return evaluateExpr(package, pacmeta, tokens[0], regex)
+        return evaluateExpr(pacmeta, tokens[0], regex)
     if len(tokens) == 2 and tokens[0] == 'not':
-        return not evaluateExpr(package, pacmeta, tokens[1], regex)
+        return not evaluateExpr(pacmeta, tokens[1], regex)
 
     operator = tokens[1]
     if operator in ('and', 'or'):
         values = (i if isinstance(i, bool) else
-                  evaluateExpr(package, pacmeta, i, regex)
+                  evaluateExpr(pacmeta, i, regex)
                   for i in tokens[::2]) # All but operators
         return ((operator == 'and' and all(values)) or
                 (operator == 'or' and any(values)))
@@ -127,7 +129,7 @@ def evaluateExpr(package, pacmeta, tokens, regex):
             if not filelist:
                 with open(metadir + '.filelist') as file:
                     filelist = json.load(file)
-            pacvalues = filelist.get(package)
+            pacvalues = filelist.get(pacmeta['name'][0])
         if regex:
             match = any(re.match(tokens[2], i) for i in pacvalues)
         else:
@@ -165,5 +167,5 @@ if __name__ == "__main__":
             print("Error parsing query at column " + str(e.col))
             sys.exit(1)
         matches = (package for package, pacmeta in packages
-                   if evaluateExpr(package, pacmeta, tree, args.regex))
+                   if evaluateExpr(pacmeta, tree, args.regex))
     print(*matches, sep='\n')
