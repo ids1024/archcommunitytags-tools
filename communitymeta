@@ -52,6 +52,8 @@ def parseMetadata():
         pacmeta['conflict'] = package.conflicts
         pacmeta['license'] = package.licenses
         pacmeta['packager'] = [package.packager]
+        pacmeta['url'] = [package.url or '']
+        pacmeta['desc'] = [package.desc]
         pacmeta['repo'] = [package.db.name]
         pacmeta['category'] = [categories.get(package.name, 'No')]
         if package.name in os.listdir(metadir):
@@ -65,7 +67,7 @@ def parseMetadata():
     for name, pacmeta in packages.items():
         for param, values in pacmeta.items():
             for i, value in enumerate(values.copy()):
-                if value[0] == '$':
+                if value and value[0] == '$':
                     if '.' in value:
                         pac, param = value[1:].split('.', 1)
                         newvals = packages.get(pac, {}).get(param, [])
