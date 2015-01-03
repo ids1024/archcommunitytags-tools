@@ -9,6 +9,7 @@ import pyparsing
 import argparse
 import urllib.request
 import json
+import tarfile
 
 metadir = os.path.expanduser("~/.communitymeta/")
 syncurl = "git://github.com/ids1024/archcommunitymetadata"
@@ -16,7 +17,7 @@ pacneturl = "http://pacnet.archlinux.pl/api/packages/"
 handle = config.init_with_config("/etc/pacman.conf")
 
 operator = pyparsing.Regex("!=|=").setName("operator")
-text = pyparsing.Word(pyparsing.alphanums + '-_') | pyparsing.QuotedString('"')
+text = pyparsing.Word(pyparsing.alphanums + '-_/') | pyparsing.QuotedString('"')
 condition = pyparsing.Group((text + operator + text) | text)
 
 expr = pyparsing.operatorPrecedence(condition, [
@@ -24,6 +25,7 @@ expr = pyparsing.operatorPrecedence(condition, [
                             ("and", 2, pyparsing.opAssoc.LEFT),
                             ("or", 2, pyparsing.opAssoc.LEFT)
                             ])
+filelist = None
 
 class EvaluationError(Exception):
     pass
@@ -75,34 +77,55 @@ def sync():
     if not os.path.exists(metadir):
         returnval = subprocess.call(["git", "clone", syncurl, metadir])
     else:
-        origdir = os.getcwd()
-        os.chdir(metadir)
-        returnval = subprocess.call(["git", "pull"])
-        os.chdir(origdir)
+        returnval = subprocess.call(["git", "-C", metadir, "pull"])
     if returnval != 0:
         print("Error: git returned nonzero exit status")
         sys.exit(1)
+    origdir = os.getcwd()
+    os.chdir(metadir)
+    print("Getting file lists from sync dbs...")
+    filelist = {}
+    for db in handle.get_syncdbs():
+        try:
+            files = urllib.request.urlopen(
+                       db.servers[0] + '/' + db.name + '.files')
+            tar = tarfile.open(mode='r:gz', fileobj=files)
+            filelist.update({i.name.rsplit('-', 2)[0]:
+                             tar.extractfile(i).read().decode().splitlines()[1:]
+                             for i in tar if i.name.endswith('/files')})
+            tar.close()
+        except urllib.error.HTTPError:
+            print("Unable to find file list for repo " + db.name + ": Skipping")
+    with open('.filelist', 'w') as file:
+        json.dump(filelist, file)
     print("Syncing with pacnet...")
     pacnetdata = urllib.request.urlopen(pacneturl).read().decode()
-    with open(metadir + '.pacnet', 'w') as file:
+    with open('.pacnet', 'w') as file:
         file.write(pacnetdata)
+    os.chdir(origdir)
 
-def evaluateExpr(pacmeta, tokens):
+def evaluateExpr(package, pacmeta, tokens):
     if len(tokens) == 1 and isinstance(tokens[0], str):
         return (tokens[0] in pacmeta) and ('false' not in pacmeta[tokens[0]])
     if len(tokens) == 1:
-        return evaluateExpr(pacmeta, tokens[0])
+        return evaluateExpr(package, pacmeta, tokens[0])
     if len(tokens) == 2 and tokens[0] == 'not':
-        return not evaluateExpr(pacmeta, tokens[1])
+        return not evaluateExpr(package, pacmeta, tokens[1])
 
     operator = tokens[1]
     if operator in ('and', 'or'):
-        values = (i if isinstance(i, bool) else evaluateExpr(pacmeta, i)
+        values = (i if isinstance(i, bool) else evaluateExpr(package, pacmeta, i)
                   for i in tokens[::2]) # All but operators
         return ((operator == 'and' and all(values)) or
                 (operator == 'or' and any(values)))
     elif operator in ('=', '!='):
+        global filelist
         pacvalues = pacmeta.get(tokens[0], ())
+        if tokens[0] == 'file':
+            if not filelist:
+                with open(metadir + '.filelist') as file:
+                    filelist = json.load(file)
+            pacvalues = filelist.get(package)
         return ((operator == '=' and tokens[2] in pacvalues) or
                 (operator == '!=' and tokens[2] not in pacvalues))
     else:
@@ -135,5 +158,5 @@ if __name__ == "__main__":
             print("Error parsing query at column " + str(e.col))
             sys.exit(1)
         matches = (package for package, pacmeta in packages
-                   if evaluateExpr(pacmeta, tree))
+                   if evaluateExpr(package, pacmeta, tree))
     print(*matches, sep='\n')
