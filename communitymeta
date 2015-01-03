@@ -96,7 +96,7 @@ def evaluateExpr(pacmeta, tokens):
         # This code should never be reached; raise exception if it is
         raise EvaluationError
 
-    if ((operator == '=!' and (right not in pacvalues)) or
+    if ((operator == '!=' and (right not in pacvalues)) or
         (operator == '=' and (right in pacvalues)) or
         (operator == 'and' and all(values)) or
         (operator == 'or' and any(values))):
