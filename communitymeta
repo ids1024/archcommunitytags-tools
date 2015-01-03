@@ -48,7 +48,7 @@ def parseMetadata():
         pacmeta['license'] = package.licenses
         pacmeta['packager'] = [package.packager]
         pacmeta['repo'] = [package.db.name]
-        pacmeta['category'] = [categories.get(package.name, 'none')]
+        pacmeta['category'] = [categories.get(package.name, 'No')]
         if package.name in os.listdir(metadir):
             with open(metadir + package.name) as file:
                 for line in file:
