@@ -2,6 +2,7 @@
 
 import shlex
 import os
+import re
 import sys
 import subprocess
 from pycman import config
@@ -104,17 +105,18 @@ def sync():
         file.write(pacnetdata)
     os.chdir(origdir)
 
-def evaluateExpr(package, pacmeta, tokens):
+def evaluateExpr(package, pacmeta, tokens, regex):
     if len(tokens) == 1 and isinstance(tokens[0], str):
         return (tokens[0] in pacmeta) and ('false' not in pacmeta[tokens[0]])
     if len(tokens) == 1:
-        return evaluateExpr(package, pacmeta, tokens[0])
+        return evaluateExpr(package, pacmeta, tokens[0], regex)
     if len(tokens) == 2 and tokens[0] == 'not':
-        return not evaluateExpr(package, pacmeta, tokens[1])
+        return not evaluateExpr(package, pacmeta, tokens[1], regex)
 
     operator = tokens[1]
     if operator in ('and', 'or'):
-        values = (i if isinstance(i, bool) else evaluateExpr(package, pacmeta, i)
+        values = (i if isinstance(i, bool) else
+                  evaluateExpr(package, pacmeta, i, regex)
                   for i in tokens[::2]) # All but operators
         return ((operator == 'and' and all(values)) or
                 (operator == 'or' and any(values)))
@@ -126,8 +128,11 @@ def evaluateExpr(package, pacmeta, tokens):
                 with open(metadir + '.filelist') as file:
                     filelist = json.load(file)
             pacvalues = filelist.get(package)
-        return ((operator == '=' and tokens[2] in pacvalues) or
-                (operator == '!=' and tokens[2] not in pacvalues))
+        if regex:
+            match = any(re.match(tokens[2], i) for i in pacvalues)
+        else:
+            match = tokens[2] in pacvalues
+        return (operator == '=' and match) or (operator == '!=' and not match)
     else:
         # This code should never be reached; raise exception if it is
         raise EvaluationError
@@ -138,6 +143,8 @@ if __name__ == "__main__":
             description='Package metadata provided by the community')
     parser.add_argument('--sync', action='store_true',
             help='synchronize with server')
+    parser.add_argument('-r', '--regex', action='store_true',
+            help='support regular expressions in search')
     parser.add_argument('query', nargs='?', default='')
     args = parser.parse_args()
 
@@ -158,5 +165,5 @@ if __name__ == "__main__":
             print("Error parsing query at column " + str(e.col))
             sys.exit(1)
         matches = (package for package, pacmeta in packages
-                   if evaluateExpr(package, pacmeta, tree))
+                   if evaluateExpr(package, pacmeta, tree, args.regex))
     print(*matches, sep='\n')
