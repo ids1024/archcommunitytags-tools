@@ -14,7 +14,7 @@ handle = config.init_with_config("/etc/pacman.conf")
 
 operator = pyparsing.Regex("!=|=").setName("operator")
 text = pyparsing.Word(pyparsing.alphanums + '-_') | pyparsing.QuotedString('"')
-condition = pyparsing.Group(text + operator + text)
+condition = pyparsing.Group((text + operator + text) | text)
 
 expr = pyparsing.operatorPrecedence(condition,[
                             ("not", 1, pyparsing.opAssoc.RIGHT, ),
@@ -76,6 +76,8 @@ def sync():
         sys.exit(1)
 
 def evaluateExpr(pacmeta, tokens):
+    if len(tokens) == 1 and isinstance(tokens[0], str):
+        return (tokens[0] in pacmeta) and ('false' not in pacmeta[tokens[0]])
     if len(tokens) == 1:
         return evaluateExpr(pacmeta, tokens[0])
     if len(tokens) == 2 and tokens[0] == 'not':
