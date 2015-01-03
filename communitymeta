@@ -85,11 +85,8 @@ def evaluateExpr(pacmeta, tokens):
 
     operator = tokens[1]
     if operator in ('and', 'or'):
-        values = []
-        for value in tokens[::2]: # All but operators
-            if not isinstance(value, bool):
-                value = evaluateExpr(pacmeta, value)
-            values.append(value)
+        values = (i if isinstance(i, bool) else evaluateExpr(pacmeta, i)
+                  for i in tokens[::2]) # All but operators
     elif operator in ('=', '!='):
         left = tokens[0]
         right = tokens[2]
@@ -98,12 +95,10 @@ def evaluateExpr(pacmeta, tokens):
         # This code should never be reached; raise exception if it is
         raise EvaluationError
 
-    if ((operator == '!=' and (right not in pacvalues)) or
-        (operator == '=' and (right in pacvalues)) or
-        (operator == 'and' and all(values)) or
-        (operator == 'or' and any(values))):
-        return True
-    return False
+    return ((operator == '!=' and (right not in pacvalues)) or
+            (operator == '=' and (right in pacvalues)) or
+            (operator == 'and' and all(values)) or
+            (operator == 'or' and any(values)))
 
 
 if __name__ == "__main__":
