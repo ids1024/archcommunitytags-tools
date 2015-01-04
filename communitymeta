@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import shlex
 import os
 import re
 import sys
@@ -39,8 +38,6 @@ def parseMetadata():
     categories = {package['name']: package['category__name']
                  for package in pacnet}
     syncpkgs = (pkg for db in handle.get_syncdbs() for pkg in db.pkgcache)
-    packages = {}
-    parsevars = []
     for package in syncpkgs:
         pacmeta = {}
         pacmeta['name'] = [package.name]
@@ -56,27 +53,15 @@ def parseMetadata():
         pacmeta['desc'] = [package.desc]
         pacmeta['repo'] = [package.db.name]
         pacmeta['category'] = [categories.get(package.name, 'No')]
+        pacmeta['tag'] = []
         if package.name in os.listdir(metadir):
             with open(metadir + package.name) as file:
                 for line in file:
-                    columns = shlex.split(line)
-                    if not columns:
+                    tag = line.split('#')[0].strip()
+                    if not tag:
                         continue
-                    pacmeta[columns[0]] = columns[1:]
-        packages[package.name] = pacmeta
-    for name, pacmeta in packages.items():
-        for param, values in pacmeta.items():
-            for i, value in enumerate(values.copy()):
-                if value and value[0] == '$':
-                    if '.' in value:
-                        pac, param = value[1:].split('.', 1)
-                        newvals = packages.get(pac, {}).get(param, [])
-                    else:
-                        newvals = pacmeta[value[1:]]
-                    values.extend(newvals)
-                    del values[i]
-                    
-    return packages
+                    pacmeta['tag'].append(tag)
+        yield package.name, pacmeta
 
 def sync():
     if not os.path.exists(metadir):
@@ -158,7 +143,7 @@ if __name__ == "__main__":
     if not os.path.exists(metadir):
         print("Metadata directory does not exist: running initial sync")
         sync()
-    packages = parseMetadata().items()
+    packages = parseMetadata()
     if not args.query:
         # Display all packages by default
         matches = (package for package, pacmeta in packages)
