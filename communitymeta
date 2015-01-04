@@ -96,7 +96,7 @@ def sync():
 
 def evaluateExpr(pacmeta, tokens, regex):
     if len(tokens) == 1 and isinstance(tokens[0], str):
-        return (tokens[0] in pacmeta) and ('false' not in pacmeta[tokens[0]])
+        return (tokens[0] in pacmeta) and pacmeta[tokens[0]]
     if len(tokens) == 1:
         return evaluateExpr(pacmeta, tokens[0], regex)
     if len(tokens) == 2 and tokens[0] == 'not':
