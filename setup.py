@@ -7,7 +7,7 @@ setup(name='communitytags',
       description='Community provided tags for packages.',
       author='Ian D. Scott',
       author_email='ian@perebruin.com',
-      license = "MIT",
+      license = "GPL3",
       url='http://github.com/ids1024/archcommunitytags-tools/',
       scripts = ['communitytags'],
      )
