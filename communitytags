@@ -11,8 +11,8 @@ import urllib.request
 import json
 import tarfile
 
-metadir = os.path.expanduser("~/.communitymeta/")
-syncurl = "git://github.com/ids1024/archcommunitymetadata"
+tagdir = os.path.expanduser("~/.communitytags/")
+syncurl = "git://github.com/ids1024/archcommunitytags"
 pacneturl = "http://pacnet.archlinux.pl/api/packages/"
 handle = config.init_with_config("/etc/pacman.conf")
 
@@ -33,7 +33,7 @@ class EvaluationError(Exception):
 
 def parseMetadata():
     # This could be stored in an sqlite database for speed
-    with open(metadir + '.pacnet') as file:
+    with open(tagdir + '.pacnet') as file:
         pacnet = json.load(file)
     categories = {package['name']: package['category__name']
                  for package in pacnet}
@@ -54,8 +54,8 @@ def parseMetadata():
         pacmeta['repo'] = [package.db.name]
         pacmeta['category'] = [categories.get(package.name, 'No')]
         pacmeta['tag'] = []
-        if package.name in os.listdir(metadir):
-            with open(metadir + package.name) as file:
+        if package.name in os.listdir(tagdir):
+            with open(tagdir + package.name) as file:
                 for line in file:
                     tag = line.split('#')[0].strip()
                     if not tag:
@@ -64,15 +64,15 @@ def parseMetadata():
         yield package.name, pacmeta
 
 def sync():
-    if not os.path.exists(metadir):
-        returnval = subprocess.call(["git", "clone", syncurl, metadir])
+    if not os.path.exists(tagdir):
+        returnval = subprocess.call(["git", "clone", syncurl, tagdir])
     else:
-        returnval = subprocess.call(["git", "-C", metadir, "pull"])
+        returnval = subprocess.call(["git", "-C", tagdir, "pull"])
     if returnval != 0:
         print("Error: git returned nonzero exit status")
         sys.exit(1)
     origdir = os.getcwd()
-    os.chdir(metadir)
+    os.chdir(tagdir)
     print("Getting file lists from sync dbs...")
     filelist = {}
     for db in handle.get_syncdbs():
@@ -114,7 +114,7 @@ def evaluateExpr(pacmeta, tokens, regex):
         pacvalues = pacmeta.get(tokens[0], ())
         if tokens[0] == 'file':
             if not filelist:
-                with open(metadir + '.filelist') as file:
+                with open(tagdir + '.filelist') as file:
                     filelist = json.load(file)
             pacvalues = filelist.get(pacmeta['name'][0])
         if regex:
@@ -129,7 +129,7 @@ def evaluateExpr(pacmeta, tokens, regex):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-            description='Package metadata provided by the community')
+            description='Package tags provided by the community')
     parser.add_argument('--sync', action='store_true',
             help='synchronize with server')
     parser.add_argument('-r', '--regex', action='store_true',
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     if args.sync:
         sync()
         sys.exit(0)
-    if not os.path.exists(metadir):
+    if not os.path.exists(tagdir):
         print("Metadata directory does not exist: running initial sync")
         sync()
     packages = parseMetadata()
