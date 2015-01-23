@@ -76,9 +76,10 @@ def sync():
     print("Getting file lists from sync dbs...")
     filelist = {}
     for db in handle.get_syncdbs():
+        filename = db.servers[0] + '/' + db.name + '.files'
+        print(filename)
         try:
-            files = urllib.request.urlopen(
-                       db.servers[0] + '/' + db.name + '.files')
+            files = urllib.request.urlopen(filename)
             tar = tarfile.open(mode='r:gz', fileobj=files)
             filelist.update({i.name.rsplit('-', 2)[0]:
                              tar.extractfile(i).read().decode().splitlines()[1:]
