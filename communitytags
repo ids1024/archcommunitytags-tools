@@ -65,19 +65,21 @@ def parseMetadata():
 
 def sync():
     if not os.path.exists(tagdir):
-        returnval = subprocess.call(["git", "clone", syncurl, tagdir])
+        returnval = subprocess.call(["git", "clone", syncurl, tagdir],
+                                    stdout=sys.stderr)
     else:
-        returnval = subprocess.call(["git", "-C", tagdir, "pull"])
+        returnval = subprocess.call(["git", "-C", tagdir, "pull"],
+                                    stdout=sys.stderr)
     if returnval != 0:
-        print("Error: git returned nonzero exit status")
+        print("Error: git returned nonzero exit status", file=sys.stderr)
         sys.exit(1)
     origdir = os.getcwd()
     os.chdir(tagdir)
-    print("Getting file lists from sync dbs...")
+    print("Getting file lists from sync dbs...", file=sys.stderr)
     filelist = {}
     for db in handle.get_syncdbs():
         filename = db.servers[0] + '/' + db.name + '.files'
-        print(filename)
+        print(filename, file=sys.stderr)
         try:
             files = urllib.request.urlopen(filename)
             tar = tarfile.open(mode='r|*', fileobj=files)
@@ -86,10 +88,11 @@ def sync():
                              for i in tar if i.name.endswith('/files')})
             tar.close()
         except urllib.error.HTTPError:
-            print("Unable to find file list for repo " + db.name + ": Skipping")
+            print("Unable to find file list for repo " + db.name + ": Skipping",
+                  file=sys.stderr)
     with open('.filelist', 'w') as file:
         json.dump(filelist, file)
-    print("Syncing with pacnet...")
+    print("Syncing with pacnet...", file=sys.stderr)
     pacnetdata = urllib.request.urlopen(pacneturl).read().decode()
     with open('.pacnet', 'w') as file:
         file.write(pacnetdata)
@@ -142,7 +145,8 @@ if __name__ == "__main__":
         sync()
         sys.exit(0)
     if not os.path.exists(tagdir):
-        print("Metadata directory does not exist: running initial sync")
+        print("Metadata directory does not exist: running initial sync",
+              file=sys.stderr)
         sync()
     packages = parseMetadata()
     if not args.query:
