@@ -98,6 +98,23 @@ def sync():
         file.write(pacnetdata)
     os.chdir(origdir)
 
+
+def getTags():
+    syncpkgs = (pkg for db in handle.get_syncdbs() for pkg in db.pkgcache)
+    tags = {}
+    for package in syncpkgs:
+        if package.name in os.listdir(tagdir):
+            with open(tagdir + package.name) as file:
+                for line in file:
+                    tag = line.split('#')[0].strip()
+                    if not tag:
+                        continue
+                    if tag not in tags:
+                        tags[tag] = []
+                    tags[tag].append(package.name)
+    return tags
+
+
 def evaluateExpr(pacmeta, tokens, regex):
     if len(tokens) == 1 and isinstance(tokens[0], str):
         return (tokens[0] in pacmeta) and pacmeta[tokens[0]]
@@ -136,6 +153,8 @@ if __name__ == "__main__":
             description='Package tags provided by the community')
     parser.add_argument('--sync', action='store_true',
             help='synchronize with server')
+    parser.add_argument('--tags', action='store_true',
+            help='list all tags')
     parser.add_argument('-r', '--regex', action='store_true',
             help='support regular expressions in search')
     parser.add_argument('query', nargs='?', default='')
@@ -148,6 +167,13 @@ if __name__ == "__main__":
         print("Metadata directory does not exist: running initial sync",
               file=sys.stderr)
         sync()
+    if args.tags:
+        lentags = (k + ' ' + str(len(v)) for k, v in sorted(getTags().items(),
+                key=lambda x: len(x[1]), reverse=True))
+        for i in lentags:
+            print(i)
+        sys.exit(0)
+
     packages = parseMetadata()
     if not args.query:
         # Display all packages by default
