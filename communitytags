@@ -22,21 +22,23 @@ text = pyparsing.Word(allowedchars) | pyparsing.QuotedString('"')
 condition = pyparsing.Group((text + operator + text) | text)
 
 expr = pyparsing.operatorPrecedence(condition, [
-                            ("not", 1, pyparsing.opAssoc.RIGHT),
-                            ("and", 2, pyparsing.opAssoc.LEFT),
-                            ("or", 2, pyparsing.opAssoc.LEFT)
-                            ])
+    ("not", 1, pyparsing.opAssoc.RIGHT),
+    ("and", 2, pyparsing.opAssoc.LEFT),
+    ("or", 2, pyparsing.opAssoc.LEFT)
+])
 filelist = None
+
 
 class EvaluationError(Exception):
     pass
+
 
 def parseMetadata():
     # This could be stored in an sqlite database for speed
     with open(tagdir + '.pacnet') as file:
         pacnet = json.load(file)
     categories = {package['name']: package['category__name']
-                 for package in pacnet}
+                  for package in pacnet}
     syncpkgs = (pkg for db in handle.get_syncdbs() for pkg in db.pkgcache)
     for package in syncpkgs:
         pacmeta = {}
@@ -63,6 +65,7 @@ def parseMetadata():
                     pacmeta['tag'].append(tag)
         yield package.name, pacmeta
 
+
 def sync():
     if not os.path.exists(tagdir):
         returnval = subprocess.call(["git", "clone", syncurl, tagdir],
@@ -84,11 +87,12 @@ def sync():
             files = urllib.request.urlopen(filename)
             tar = tarfile.open(mode='r|*', fileobj=files)
             filelist.update({i.name.rsplit('-', 2)[0]:
-                             tar.extractfile(i).read().decode().splitlines()[1:]
+                             tar.extractfile(
+                                 i).read().decode().splitlines()[1:]
                              for i in tar if i.name.endswith('/files')})
             tar.close()
         except urllib.error.HTTPError:
-            print("Unable to find file list for repo " + db.name + ": Skipping",
+            print("Unable to find file list for '" + db.name + "': Skipping",
                   file=sys.stderr)
     with open('.filelist', 'w') as file:
         json.dump(filelist, file)
@@ -127,7 +131,7 @@ def evaluateExpr(pacmeta, tokens, regex):
     if operator in ('and', 'or'):
         values = (i if isinstance(i, bool) else
                   evaluateExpr(pacmeta, i, regex)
-                  for i in tokens[::2]) # All but operators
+                  for i in tokens[::2])  # All but operators
         return ((operator == 'and' and all(values)) or
                 (operator == 'or' and any(values)))
     elif operator in ('=', '!='):
@@ -150,13 +154,13 @@ def evaluateExpr(pacmeta, tokens, regex):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-            description='Package tags provided by the community')
+        description='Package tags provided by the community')
     parser.add_argument('--sync', action='store_true',
-            help='synchronize with server')
+                        help='synchronize with server')
     parser.add_argument('--tags', action='store_true',
-            help='list all tags')
+                        help='list all tags')
     parser.add_argument('-r', '--regex', action='store_true',
-            help='support regular expressions in search')
+                        help='support regular expressions in search')
     parser.add_argument('query', nargs='?', default='')
     args = parser.parse_args()
 
@@ -168,10 +172,9 @@ if __name__ == "__main__":
               file=sys.stderr)
         sync()
     if args.tags:
-        lentags = (k + ' ' + str(len(v)) for k, v in sorted(getTags().items(),
-                key=lambda x: len(x[1]), reverse=True))
-        for i in lentags:
-            print(i)
+        tags = sorted(getTags().items(), key=lambda x: len(x[1]), reverse=True)
+        for k, v in tags:
+            print(k + ' ' + str(len(v)))
         sys.exit(0)
 
     packages = parseMetadata()
