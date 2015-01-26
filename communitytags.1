@@ -1,0 +1,113 @@
+.TH communitytags 1 2015-01-26
+.SH NAME
+communitytags \- package tags provided by the community
+.SH SYNOPSIS
+communitytags [-h] [--sync] [-r] [query]
+.SH OPTIONS
+.PP
+\fB\-h,\fR \-\-help
+.RS 4
+Display help message
+.RE
+.PP
+\fR \-\-sync
+.RS 4
+Sync metadata with server
+.RE
+.PP
+\fB\-r,\fR \-\-regex
+.RS 4
+Search by regular expression
+.RE
+.SH QUERIES
+A simple query is in the form \'parameter=value\'.  For parameters that
+can have multiple values (like \'tag\' and \'depend\'), this tests that one
+of the values matches.  If using --regex, value will be interpreted as a
+regular expression and matched against all the packages.  More advanced
+queries can be performed by combining such statements with \'and\' and
+\'or\'.  Statements can be negated with \'not\' and grouped with
+parentheses.  The statement \'parameter!=value\' is equivalent to
+\'not parameter=value\'.
+.SH PARAMETERS
+.IP \[bu] 2
+name
+.IP \[bu]
+provide
+.IP \[bu]
+depend
+.IP \[bu]
+optdepend
+.IP \[bu]
+group
+.IP \[bu]
+replace
+.IP \[bu]
+conflict
+.IP \[bu]
+license
+.IP \[bu]
+packager
+.IP \[bu]
+url
+.IP \[bu]
+desc
+.IP \[bu]
+repo
+.IP \[bu]
+category
+.RS 4
+Category data comes from pacnet (http://pacnet.archlinux.pl/)
+.RE
+.IP \[bu]
+tag
+.RS 4
+This is the main purpose of the program.  Tags can be contributed
+by the community.  See http://github.com/ids1024/archcommunitytags for
+more information.
+.RE
+.IP \[bu]
+file
+.RS 4
+Files contained in package (not supported by all repos).  Provides
+similar functionality to \fBpkgfile\fR(1).
+.RE
+.SH EXAMPLES
+.PP
+communitytags tag=suckless
+.RS 4
+Find packages tagged suckless
+.RE
+.PP
+communitytags '(tag=foo or tag=bar) and not tag=baz'
+.rs 4
+find packages tagged foo or bar but not baz
+.re
+.pp
+communitytags -r 'url=.*suckless.org and not tag=suckless'
+.RS 4
+Find packages hosted on suckless.org missing the suckless tag
+.RE
+.PP
+communitytags -r 'url=.*github and desc=.*python'
+.RS 4
+Find all packages with "python" in their descriptions that are hosted on github
+.RE
+.PP
+communitytags -r 'name=python and repo=extra'
+.RS 4
+Find all packages in extra with names starting with "python"
+.RE
+.PP
+communitytags category=app-pacman
+.RS 4
+List packages in pacnet's "app-pacman" category
+.RE
+.PP
+communitytags -r 'file=.*pkgfile'
+.RS 4
+Find packages containing files with "pkgfile" in their paths
+.RE
+.SH SEE ALSO
+\fBpacman\fR(8) \fBpkgfile\fR(1)
+.SH BUGS
+https://github.com/ids1024/archcommunitytags-tools/issues
