@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+from pycman import config
+
+tagdir = os.path.expanduser("~/.communitytags/")
+handle = config.init_with_config("/etc/pacman.conf")
+
+orig = sys.argv[1]
+new = sys.argv[2]
+
+for package in os.listdir(tagdir):
+    if package.startswith('.') or package == 'README.md':
+        continue
+    with open(tagdir + package) as file:
+        lines = file.read().split('\n')
+    for i, line in enumerate(lines):
+        tag = line.split('#')[0].strip()
+        if tag == orig:
+            print(package)
+            lines[i] = line.replace(orig, new, 1)
+            with open(tagdir + package, 'w') as file:
+                file.write('\n'.join(lines))
+            break
