@@ -32,7 +32,8 @@ regular expression and matched against all the packages.  More advanced
 queries can be performed by combining such statements with \'and\' and
 \'or\'.  Statements can be negated with \'not\' and grouped with
 parentheses.  The statement \'parameter!=value\' is equivalent to
-\'not parameter=value\'.
+\'not parameter=value\'.  A query of simply 'parameter' will test if
+that parameter has at least one value.
 .SH PARAMETERS
 .IP \[bu] 2
 name
@@ -111,6 +112,11 @@ List packages in pacnet's "app-pacman" category
 communitytags -r 'file=.*pkgfile'
 .RS 4
 Find packages containing files with "pkgfile" in their paths
+.RE
+.PP
+communitytags tag
+.RS 4
+Find packages with tags
 .RE
 .SH SEE ALSO
 \fBpacman\fR(8), \fBpkgfile\fR(1)
