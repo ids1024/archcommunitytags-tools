@@ -8,7 +8,7 @@ handle = config.init_with_config("/etc/pacman.conf")
 
 syncpkgnames = [pkg.name for db in handle.get_syncdbs() for pkg in db.pkgcache]
 for i in os.listdir(tagdir):
-    if i.startswith('.'):
+    if i.startswith('.') or i == 'README.md':
         continue
     if i not in syncpkgnames:
         print(i)
