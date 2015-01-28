@@ -142,7 +142,7 @@ def evaluateExpr(pacmeta, tokens, regex):
             if not filelist:
                 with open(datadir + '.filelist') as file:
                     filelist = json.load(file)
-            pacvalues = filelist.get(pacmeta['name'][0])
+            pacvalues = filelist.get(pacmeta['name'][0], ())
         if regex:
             match = any(re.match(tokens[2], i) for i in pacvalues)
         else:
