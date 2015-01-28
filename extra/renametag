@@ -5,8 +5,6 @@ import sys
 from pycman import config
 
 tagdir = os.path.expanduser("~/.communitytags/tags/")
-handle = config.init_with_config("/etc/pacman.conf")
-
 orig = sys.argv[1]
 new = sys.argv[2]
 
