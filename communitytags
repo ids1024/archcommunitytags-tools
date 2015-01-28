@@ -11,7 +11,8 @@ import urllib.request
 import json
 import tarfile
 
-tagdir = os.path.expanduser("~/.communitytags/")
+datadir = os.path.expanduser("~/.communitytags/")
+tagdir = datadir + 'tags/'
 syncurl = "git://github.com/ids1024/archcommunitytags"
 pacneturl = "http://pacnet.archlinux.pl/api/packages/"
 handle = config.init_with_config("/etc/pacman.conf")
@@ -35,7 +36,7 @@ class EvaluationError(Exception):
 
 def parseMetadata():
     # This could be stored in an sqlite database for speed
-    with open(tagdir + '.pacnet') as file:
+    with open(datadir + '.pacnet') as file:
         pacnet = json.load(file)
     categories = {package['name']: package['category__name']
                   for package in pacnet}
@@ -67,17 +68,17 @@ def parseMetadata():
 
 
 def sync():
-    if not os.path.exists(tagdir):
-        returnval = subprocess.call(["git", "clone", syncurl, tagdir],
+    if not os.path.exists(datadir):
+        returnval = subprocess.call(["git", "clone", syncurl, datadir],
                                     stdout=sys.stderr)
     else:
-        returnval = subprocess.call(["git", "-C", tagdir, "pull"],
+        returnval = subprocess.call(["git", "-C", datadir, "pull"],
                                     stdout=sys.stderr)
     if returnval != 0:
         print("Error: git returned nonzero exit status", file=sys.stderr)
         sys.exit(1)
     origdir = os.getcwd()
-    os.chdir(tagdir)
+    os.chdir(datadir)
     print("Getting file lists from sync dbs...", file=sys.stderr)
     filelist = {}
     for db in handle.get_syncdbs():
@@ -139,7 +140,7 @@ def evaluateExpr(pacmeta, tokens, regex):
         pacvalues = pacmeta.get(tokens[0], ())
         if tokens[0] == 'file':
             if not filelist:
-                with open(tagdir + '.filelist') as file:
+                with open(datadir + '.filelist') as file:
                     filelist = json.load(file)
             pacvalues = filelist.get(pacmeta['name'][0])
         if regex:
@@ -167,7 +168,7 @@ if __name__ == "__main__":
     if args.sync:
         sync()
         sys.exit(0)
-    if not os.path.exists(tagdir):
+    if not os.path.exists(datadir):
         print("Metadata directory does not exist: running initial sync",
               file=sys.stderr)
         sync()
