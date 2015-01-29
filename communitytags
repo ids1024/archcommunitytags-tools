@@ -81,20 +81,45 @@ def sync():
     os.chdir(datadir)
     print("Getting file lists from sync dbs...", file=sys.stderr)
     filelist = {}
+    if not os.path.exists('.rsyncfilelists'):
+        os.mkdir('.rsyncfilelists')
+
+    os.chdir('.rsyncfilelists')
     for db in handle.get_syncdbs():
-        filename = db.servers[0] + '/' + db.name + '.files'
+        if db.name in ('core', 'extra', 'community', 'multilib' ,'testing',
+                'community-testing', 'multilib-testing') and \
+                handle.arch in ('i686', 'x86_64'):
+            filename = "rsync://mirror.aarnet.edu.au/archlinux/" + db.name + \
+                       '/os/' + handle.arch + '/' + db.name + '.files'
+        else:
+            filename = db.servers[0] + '/' + db.name + '.files'
+
         print(filename, file=sys.stderr)
-        try:
-            files = urllib.request.urlopen(filename)
+
+        if filename.startswith('rsync://'):
+            returnval = subprocess.call(["rsync", "-Lq", filename, './'],
+                                        stdout=sys.stderr)
+            if returnval != 0:
+                print("Error: rsync returned nonzero exit status",
+                      file=sys.stderr)
+                continue
+            tar = tarfile.open(db.name + '.files', mode='r:*')
+
+        else:
+            try:
+                files = urllib.request.urlopen(filename)
+            except urllib.error.HTTPError:
+                print("Unable to find file list for '" + db.name + "': Skipping",
+                      file=sys.stderr)
+                continue
             tar = tarfile.open(mode='r|*', fileobj=files)
-            filelist.update({i.name.rsplit('-', 2)[0]:
-                             tar.extractfile(
-                                 i).read().decode().splitlines()[1:]
-                             for i in tar if i.name.endswith('/files')})
-            tar.close()
-        except urllib.error.HTTPError:
-            print("Unable to find file list for '" + db.name + "': Skipping",
-                  file=sys.stderr)
+        filelist.update({i.name.rsplit('-', 2)[0]:
+                         tar.extractfile(
+                             i).read().decode().splitlines()[1:]
+                         for i in tar if i.name.endswith('/files')})
+        tar.close()
+    os.chdir('..')
+
     with open('.filelist', 'w') as file:
         json.dump(filelist, file)
     print("Syncing with pacnet...", file=sys.stderr)
