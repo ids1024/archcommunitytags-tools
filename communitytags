@@ -34,6 +34,14 @@ class EvaluationError(Exception):
     pass
 
 
+def parseTags(filename):
+    with open(filename) as file:
+        for line in file:
+            tag = line.split('#')[0].strip()
+            if tag:
+                yield tag
+
+
 def parseMetadata():
     # This could be stored in an sqlite database for speed
     with open(datadir + '.pacnet') as file:
@@ -41,6 +49,7 @@ def parseMetadata():
     categories = {package['name']: package['category__name']
                   for package in pacnet}
     syncpkgs = (pkg for db in handle.get_syncdbs() for pkg in db.pkgcache)
+    packages = {}
     for package in syncpkgs:
         pacmeta = {}
         pacmeta['name'] = [package.name]
@@ -58,13 +67,18 @@ def parseMetadata():
         pacmeta['category'] = [categories.get(package.name, 'No')]
         pacmeta['tag'] = []
         if package.name in os.listdir(tagdir):
-            with open(tagdir + package.name) as file:
-                for line in file:
-                    tag = line.split('#')[0].strip()
-                    if not tag:
-                        continue
-                    pacmeta['tag'].append(tag)
-        yield package.name, pacmeta
+            pacmeta['tag'] = parseTags(tagdir + package.name)
+        packages[package.name] = pacmeta
+
+    # Handle renamed packages
+    for i in os.listdir(tagdir):
+        if i not in packages:
+            pacmeta = next((v for k, v in packages.items()
+                if i in v['replace']), None)
+            if pacmeta:
+                pacmeta['tag'] = parseTags(tagdir + i)
+
+    return packages
 
 
 def sync():
@@ -203,7 +217,7 @@ if __name__ == "__main__":
             print(k + ' ' + str(len(v)))
         sys.exit(0)
 
-    packages = parseMetadata()
+    packages = parseMetadata().items()
     if not args.query:
         # Display all packages by default
         matches = (package for package, pacmeta in packages)
